@@ -6,13 +6,11 @@ import {
   TrendingDown,
   Scale,
   Sparkles,
-  AlertTriangle,
   Database,
   Loader2,
-  CheckCircle,
   HelpCircle,
-  ArrowUpRight,
   ShieldAlert,
+  RefreshCw,
 } from 'lucide-react';
 import {
   LineChart,
@@ -108,15 +106,15 @@ export default function ManagerReport() {
   const comparison = report?.waste_comparison;
   const historySeries = report?.history_series || [];
 
-  // Prepare line chart data (Predicted vs Actual over time)
+  // Line chart data (Predicted vs Actual over time)
   const lineChartData = historySeries.slice(-20).map((item) => ({
-    label: `${item.date.substring(5)} (${item.meal_type.substring(0, 1).toUpperCase()})`,
+    label: `${String(item.date).substring(5)} (${item.meal_type.substring(0, 1).toUpperCase()})`,
     'Predicted Headcount': item.predicted_headcount,
     'Actual Served Plates': item.served_plates,
     'Plates Cooked': item.cooked_plates,
   }));
 
-  // Prepare waste comparison bar chart
+  // Waste comparison bar chart
   const wasteBarData = [
     {
       name: 'Before Forecaster (Static ~95%)',
@@ -146,15 +144,16 @@ export default function ManagerReport() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-            Food Waste Reduction & Forecast Accuracy Report
+            Food Waste Reduction & Accuracy Report
           </h1>
         </div>
 
         <button
           onClick={fetchReport}
-          className="self-start sm:self-center px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+          className="self-start sm:self-center flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
         >
-          Refresh Report
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>Refresh Report</span>
         </button>
       </div>
 
@@ -220,7 +219,7 @@ export default function ManagerReport() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Time Series Accuracy */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm min-w-0">
           <div className="mb-5">
             <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-emerald-600" />
@@ -231,8 +230,8 @@ export default function ManagerReport() {
             </p>
           </div>
 
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 w-full min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <LineChart data={lineChartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748b' }} interval="preserveStartEnd" />
@@ -275,7 +274,7 @@ export default function ManagerReport() {
         </div>
 
         {/* Chart 2: Waste Comparison Before vs After */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm min-w-0">
           <div className="mb-5">
             <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-purple-600" />
@@ -286,8 +285,8 @@ export default function ManagerReport() {
             </p>
           </div>
 
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 w-full min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <BarChart data={wasteBarData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
@@ -371,4 +370,3 @@ export default function ManagerReport() {
     </div>
   );
 }
-

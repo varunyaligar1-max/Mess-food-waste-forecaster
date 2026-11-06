@@ -9,13 +9,13 @@ import {
   TrendingUp,
   BrainCircuit,
   PlusCircle,
-  CheckCircle,
   FileText,
-  Clock,
   X,
   Loader2,
   RefreshCw,
   BarChart2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   BarChart,
@@ -28,11 +28,16 @@ import {
   Legend,
 } from 'recharts';
 
+function getLocalDateString(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function ManagerDashboard() {
   const { addToast } = useToast();
-  const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +68,12 @@ export default function ManagerDashboard() {
     fetchForecast(selectedDate);
   }, [selectedDate]);
 
+  const changeDateByDays = (delta) => {
+    const curr = new Date(selectedDate + 'T00:00:00');
+    curr.setDate(curr.getDate() + delta);
+    setSelectedDate(getLocalDateString(curr));
+  };
+
   const openLogModal = (meal) => {
     setActiveMeal(meal);
     if (meal.actual) {
@@ -73,7 +84,6 @@ export default function ManagerDashboard() {
         notes: meal.actual.notes || '',
       });
     } else {
-      // Pre-fill cooked_plates with suggested cook plates as a helpful default
       setActualForm({
         cooked_plates: meal.suggested_cook_plates.toString(),
         served_plates: meal.predicted_headcount.toString(),
@@ -88,13 +98,22 @@ export default function ManagerDashboard() {
     e.preventDefault();
     if (!activeMeal) return;
 
+    const cooked = parseInt(actualForm.cooked_plates, 10);
+    const served = parseInt(actualForm.served_plates, 10);
+    const leftover = parseFloat(actualForm.leftover_kg);
+
+    if (isNaN(cooked) || isNaN(served)) {
+      addToast('Please enter valid plate numbers', 'error');
+      return;
+    }
+
     try {
       setSubmittingActual(true);
       await managerAPI.recordActuals({
         meal_id: activeMeal.meal_id,
-        cooked_plates: parseInt(actualForm.cooked_plates, 10),
-        served_plates: parseInt(actualForm.served_plates, 10),
-        leftover_kg: parseFloat(actualForm.leftover_kg) || 0.0,
+        cooked_plates: Math.max(0, cooked),
+        served_plates: Math.max(0, served),
+        leftover_kg: isNaN(leftover) ? 0.0 : Math.max(0, leftover),
         notes: actualForm.notes || null,
       });
       addToast(`Actuals recorded for ${activeMeal.meal_type}!`, 'success');
@@ -113,7 +132,6 @@ export default function ManagerDashboard() {
   const totalPredicted = meals.reduce((sum, m) => sum + m.predicted_headcount, 0);
   const totalSuggestedCook = meals.reduce((sum, m) => sum + m.suggested_cook_plates, 0);
 
-  // Prepare chart series
   const chartData = meals.map((m) => ({
     name: m.meal_type.charAt(0).toUpperCase() + m.meal_type.slice(1),
     'Predicted Headcount': m.predicted_headcount,
@@ -121,32 +139,60 @@ export default function ManagerDashboard() {
     'Actual Served Plates': m.actual ? m.actual.served_plates : null,
   }));
 
+  const isToday = selectedDate === getLocalDateString();
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Top Controls: Date Picker + Quick Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      {/* Top Controls: Date Picker + Quick Shift Buttons */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 text-xs font-bold uppercase tracking-wider">
               Manager Portal
             </span>
-            <span className="text-xs text-slate-400 font-medium">Aggregated Kitchen Forecast</span>
+            <span className="text-xs text-slate-400 font-medium">Aggregated Kitchen Guidance</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
             Mess Headcount & Cook Forecaster
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="text-xs font-bold text-slate-700 bg-transparent focus:outline-none"
-            />
+        {/* Date Selector Navigation */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm p-1">
+            <button
+              onClick={() => changeDateByDays(-1)}
+              title="Previous day"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 px-2.5">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-xs font-bold text-slate-700 bg-transparent focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => changeDateByDays(1)}
+              title="Next day"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
+
+          {!isToday && (
+            <button
+              onClick={() => setSelectedDate(getLocalDateString())}
+              className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition-colors"
+            >
+              Jump to Today
+            </button>
+          )}
 
           <button
             onClick={() => fetchForecast(selectedDate)}
@@ -176,7 +222,7 @@ export default function ManagerDashboard() {
             <UserX className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-black text-amber-600">{totalSkips}</div>
-          <span className="text-[11px] text-slate-400 font-medium">Marked by students today</span>
+          <span className="text-[11px] text-slate-400 font-medium">Marked by students for {selectedDate}</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -185,7 +231,7 @@ export default function ManagerDashboard() {
             <TrendingUp className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-black text-emerald-600">{totalPredicted}</div>
-          <span className="text-[11px] text-slate-400 font-medium">Across all 4 meals</span>
+          <span className="text-[11px] text-slate-400 font-medium">Across all scheduled meals</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -198,7 +244,7 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Main Forecast Table */}
+      {/* Main Forecast Guidance Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
@@ -219,6 +265,7 @@ export default function ManagerDashboard() {
         ) : meals.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
             <p className="text-sm font-semibold">No meals scheduled for {selectedDate}</p>
+            <p className="text-xs text-slate-400 mt-1">Try picking a date between today and the next 3 days, or click "Jump to Today".</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -322,7 +369,7 @@ export default function ManagerDashboard() {
 
       {/* Daily Visual Chart */}
       {meals.length > 0 && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm min-w-0">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
@@ -335,8 +382,8 @@ export default function ManagerDashboard() {
             </div>
           </div>
 
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 w-full min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
@@ -362,7 +409,7 @@ export default function ManagerDashboard() {
 
       {/* Log Actuals Modal */}
       {modalOpen && activeMeal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
@@ -398,7 +445,7 @@ export default function ManagerDashboard() {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
                   />
                   <span className="text-[10px] text-slate-400">
-                    Suggested was: {activeMeal.suggested_cook_plates}
+                    Suggested: {activeMeal.suggested_cook_plates}
                   </span>
                 </div>
 
@@ -417,7 +464,7 @@ export default function ManagerDashboard() {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
                   />
                   <span className="text-[10px] text-slate-400">
-                    Predicted was: {activeMeal.predicted_headcount}
+                    Predicted: {activeMeal.predicted_headcount}
                   </span>
                 </div>
               </div>
@@ -434,7 +481,7 @@ export default function ManagerDashboard() {
                   onChange={(e) =>
                     setActualForm((prev) => ({ ...prev, leftover_kg: e.target.value }))
                   }
-                  placeholder="e.g. 1.5"
+                  placeholder="e.g. 1.2"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -477,4 +524,3 @@ export default function ManagerDashboard() {
     </div>
   );
 }
-

@@ -23,7 +23,6 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Error:', error.response?.status, error.response?.data || error.message);
     if (error.response && error.response.status === 401) {
-      // Clear invalid token
       localStorage.removeItem('mess_token');
       localStorage.removeItem('mess_user');
       if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
@@ -54,12 +53,14 @@ export const mealsAPI = {
     const res = await api.get(`/meals/upcoming?days=${days}`);
     return res.data;
   },
-  markSkip: async (mealId) => {
-    const res = await api.post(`/meals/${mealId}/skip`);
+  markSkip: async (mealId, demoOverride = false) => {
+    const url = demoOverride ? `/meals/${mealId}/skip?demo_override=true` : `/meals/${mealId}/skip`;
+    const res = await api.post(url);
     return res.data;
   },
-  unmarkSkip: async (mealId) => {
-    const res = await api.delete(`/meals/${mealId}/skip`);
+  unmarkSkip: async (mealId, demoOverride = false) => {
+    const url = demoOverride ? `/meals/${mealId}/skip?demo_override=true` : `/meals/${mealId}/skip`;
+    const res = await api.delete(url);
     return res.data;
   },
 };

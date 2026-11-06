@@ -7,7 +7,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
   Lock,
   Coffee,
   Sun,
@@ -16,6 +15,9 @@ import {
   Sparkles,
   Loader2,
   RefreshCw,
+  ToggleLeft,
+  ToggleRight,
+  Info,
 } from 'lucide-react';
 
 const MEAL_ICONS = {
@@ -23,13 +25,6 @@ const MEAL_ICONS = {
   lunch: Sun,
   snacks: Cookie,
   dinner: Moon,
-};
-
-const MEAL_COLORS = {
-  breakfast: 'from-amber-500 to-orange-500 text-amber-900 bg-amber-50 border-amber-200',
-  lunch: 'from-amber-600 to-yellow-500 text-yellow-900 bg-yellow-50 border-yellow-200',
-  snacks: 'from-orange-500 to-rose-400 text-orange-900 bg-orange-50 border-orange-200',
-  dinner: 'from-indigo-600 to-blue-600 text-indigo-900 bg-indigo-50 border-indigo-200',
 };
 
 function formatCountdown(seconds) {
@@ -70,6 +65,7 @@ export default function StudentDashboard() {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [demoOverride, setDemoOverride] = useState(true); // Default to true in development for best demo experience!
 
   const fetchMeals = async () => {
     try {
@@ -85,7 +81,6 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     fetchMeals();
-    // Refresh countdown every 60 seconds
     const interval = setInterval(() => {
       setMeals((prev) =>
         prev.map((m) => ({
@@ -99,27 +94,32 @@ export default function StudentDashboard() {
   }, []);
 
   const handleToggleSkip = async (meal) => {
-    if (!meal.can_toggle) {
-      addToast('Cutoff time has passed for this meal. Status is locked.', 'error');
+    const isLocked = !meal.can_toggle && !demoOverride;
+
+    if (isLocked) {
+      addToast(
+        '🔒 Cutoff Passed: Changes for this meal locked 3 hours prior to service. Enable "Demo Test Mode" above to toggle past-cutoff meals!',
+        'error'
+      );
       return;
     }
 
     try {
       setActionLoadingId(meal.id);
       if (meal.is_skipped) {
-        // Currently skipped -> switch back to Eating
-        await mealsAPI.unmarkSkip(meal.id);
+        // Cancel skip -> return to Eating
+        await mealsAPI.unmarkSkip(meal.id, demoOverride);
         setMeals((prev) =>
           prev.map((m) => (m.id === meal.id ? { ...m, is_skipped: false } : m))
         );
-        addToast(`You are now marked as EATING ${meal.meal_type}!`, 'success');
+        addToast(`Marked as EATING ${meal.meal_type}!`, 'success');
       } else {
-        // Currently eating -> switch to Skipping
-        await mealsAPI.markSkip(meal.id);
+        // Mark as Skip
+        await mealsAPI.markSkip(meal.id, demoOverride);
         setMeals((prev) =>
           prev.map((m) => (m.id === meal.id ? { ...m, is_skipped: true } : m))
         );
-        addToast(`Marked ${meal.meal_type} as SKIPPED. Thanks for helping reduce waste!`, 'info');
+        addToast(`Marked ${meal.meal_type} as SKIPPED. Thanks for preventing food waste!`, 'info');
       }
     } catch (err) {
       addToast(err.response?.data?.detail || 'Could not update meal skip status', 'error');
@@ -142,9 +142,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-700/10 mb-8 relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
+      {/* Welcome Hero Banner */}
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-700/10 mb-6 relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-semibold mb-3">
             <Sparkles className="w-3.5 h-3.5" />
@@ -154,7 +153,7 @@ export default function StudentDashboard() {
             Hi, {user?.name}! 👋
           </h1>
           <p className="mt-2 text-sm text-emerald-100 leading-relaxed">
-            By marking meals you won't attend before the cutoff time, you help the mess manager cook exact quantities and prevent thousands of kilograms of food waste every month.
+            By marking meals you won't attend before the cutoff, you help the kitchen cook exact quantities and prevent hundreds of kilograms of food waste.
           </p>
         </div>
 
@@ -162,7 +161,7 @@ export default function StudentDashboard() {
         <div className="mt-6 pt-6 border-t border-emerald-500/40 grid grid-cols-3 gap-4 text-center">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
             <span className="text-2xl font-black block">{totalUpcoming}</span>
-            <span className="text-xs text-emerald-100 font-medium">Next 3 Days</span>
+            <span className="text-xs text-emerald-100 font-medium">Scheduled Meals</span>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
             <span className="text-2xl font-black block text-emerald-200">{totalEating}</span>
@@ -175,6 +174,44 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Demo Evaluation Mode Control Banner */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
+            <Info className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs font-extrabold text-slate-800 block">
+              Hackathon Evaluation Mode
+            </span>
+            <span className="text-[11px] text-slate-500">
+              {demoOverride
+                ? 'Demo Mode Active: You can toggle any meal (including today\'s) to test live headcount adjustments.'
+                : 'Strict Mode Active: 3-hour cutoff rule strictly enforced. Past meals are locked.'}
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            const next = !demoOverride;
+            setDemoOverride(next);
+            addToast(
+              next ? 'Demo Mode enabled (All meals unlocked for testing)' : 'Strict Cutoff Rule enforced (Past meals locked)',
+              'info'
+            );
+          }}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+            demoOverride
+              ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+          }`}
+        >
+          {demoOverride ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+          <span>{demoOverride ? 'Demo Mode: ON' : 'Strict Mode: ON'}</span>
+        </button>
+      </div>
+
       {/* Header bar */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -183,7 +220,7 @@ export default function StudentDashboard() {
             Upcoming Meal Schedule
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Default status is <strong className="text-emerald-700">Eating</strong>. Toggle to <strong className="text-amber-700">Skip</strong> if you'll be eating out.
+            Default is <strong className="text-emerald-700">Eating</strong>. Toggle to <strong className="text-amber-700">Skip</strong> if you won't attend.
           </p>
         </div>
 
@@ -206,8 +243,7 @@ export default function StudentDashboard() {
         </div>
       ) : Object.keys(groupedMeals).length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
-          <UtensilsCrossed className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-700">No upcoming meals scheduled</h3>
+          <p className="text-sm font-bold text-slate-700">No upcoming meals scheduled</p>
           <p className="text-xs text-slate-400 mt-1">Please ask the mess manager to seed meal schedules.</p>
         </div>
       ) : (
@@ -230,10 +266,11 @@ export default function StudentDashboard() {
               </div>
 
               {/* Meal Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dayMeals.map((meal) => {
-                  const Icon = MEAL_ICONS[meal.meal_type.toLowerCase()] || UtensilsCrossed;
+                  const Icon = MEAL_ICONS[meal.meal_type.toLowerCase()] || Calendar;
                   const isLoadingThis = actionLoadingId === meal.id;
+                  const isToggleable = meal.can_toggle || demoOverride;
 
                   return (
                     <div
@@ -244,10 +281,10 @@ export default function StudentDashboard() {
                           : 'border-slate-200/80 hover:border-emerald-300'
                       }`}
                     >
-                      {/* Top Bar: Meal Type + Cutoff Countdown */}
+                      {/* Top Bar: Meal Type + Cutoff Pill */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className={`p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200/60`}>
+                          <div className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200/60">
                             <Icon className="w-4 h-4" />
                           </div>
                           <div>
@@ -283,7 +320,7 @@ export default function StudentDashboard() {
 
                       {/* Bottom Toggle Bar */}
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        {/* Current Status Indicator */}
+                        {/* Current Status Pill */}
                         <div className="flex items-center gap-2">
                           {meal.is_skipped ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg">
@@ -300,18 +337,26 @@ export default function StudentDashboard() {
 
                         {/* Action Button */}
                         <button
+                          type="button"
                           onClick={() => handleToggleSkip(meal)}
-                          disabled={!meal.can_toggle || isLoadingThis}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                            meal.is_skipped
-                              ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
-                              : 'bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-600/20'
+                          disabled={isLoadingThis}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                            !isToggleable
+                              ? 'bg-slate-200 text-slate-500 hover:bg-slate-300 cursor-pointer'
+                              : meal.is_skipped
+                              ? 'bg-slate-900 text-white hover:bg-slate-800'
+                              : 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20'
                           }`}
                         >
                           {isLoadingThis ? (
                             <>
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               <span>Updating...</span>
+                            </>
+                          ) : !isToggleable ? (
+                            <>
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Locked (Passed)</span>
                             </>
                           ) : meal.is_skipped ? (
                             <>
@@ -327,10 +372,10 @@ export default function StudentDashboard() {
                         </button>
                       </div>
 
-                      {/* Locked notification helper */}
-                      {!meal.can_toggle && (
+                      {/* Locked helper text */}
+                      {!meal.can_toggle && !demoOverride && (
                         <p className="text-[10px] text-slate-400 mt-2 text-center">
-                          🔒 Cutoff window closed 3 hours prior to service.
+                          🔒 Cutoff closed 3 hours prior to service. Enable Demo Mode above to unlock.
                         </p>
                       )}
                     </div>
@@ -344,4 +389,3 @@ export default function StudentDashboard() {
     </div>
   );
 }
-

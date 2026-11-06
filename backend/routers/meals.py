@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, col, select
 
 from backend.auth import get_current_user
+from backend.config import ENV
 from backend.database import get_session
 from backend.models import Meal, Skip, User
 from backend.schemas import MealUpcomingRead, SkipResponse
@@ -62,7 +63,6 @@ def get_upcoming_meals(
     results = []
 
     for meal in sorted_meals:
-        # Ensure cutoff_time has tzinfo for safe comparison
         cutoff = meal.cutoff_time
         if cutoff.tzinfo is None:
             cutoff = cutoff.replace(tzinfo=dt.timezone.utc)
@@ -90,12 +90,14 @@ def get_upcoming_meals(
 @router.post("/{meal_id}/skip", response_model=SkipResponse)
 def mark_meal_skip(
     meal_id: int,
+    demo_override: bool = Query(default=False, description="Demo override for hackathon evaluations"),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """
     Student marks a meal to SKIP.
-    Strictly enforced: students cannot change skip status after the meal's cutoff_time.
+    Strictly enforced: students cannot change skip status after the meal's cutoff_time,
+    unless demo_override is active in development mode.
     """
     meal = session.get(Meal, meal_id)
     if not meal:
@@ -109,13 +111,12 @@ def mark_meal_skip(
     if cutoff.tzinfo is None:
         cutoff = cutoff.replace(tzinfo=dt.timezone.utc)
 
-    if now_utc >= cutoff:
+    if now_utc >= cutoff and not (demo_override and ENV == "development"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cutoff time ({cutoff.strftime('%Y-%m-%d %H:%M UTC')}) has passed. You cannot change your skip status.",
+            detail=f"Cutoff time has passed for this meal. Status is locked 3 hours prior to service.",
         )
 
-    # Check if skip row already exists
     existing_skip = session.exec(
         select(Skip).where(
             Skip.user_id == current_user.id,
@@ -143,12 +144,14 @@ def mark_meal_skip(
 @router.delete("/{meal_id}/skip", response_model=SkipResponse)
 def unmark_meal_skip(
     meal_id: int,
+    demo_override: bool = Query(default=False, description="Demo override for hackathon evaluations"),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """
     Student cancels a skip (status returns to eating).
-    Strictly enforced: students cannot change skip status after the meal's cutoff_time.
+    Strictly enforced: students cannot change skip status after the meal's cutoff_time,
+    unless demo_override is active in development mode.
     """
     meal = session.get(Meal, meal_id)
     if not meal:
@@ -162,10 +165,10 @@ def unmark_meal_skip(
     if cutoff.tzinfo is None:
         cutoff = cutoff.replace(tzinfo=dt.timezone.utc)
 
-    if now_utc >= cutoff:
+    if now_utc >= cutoff and not (demo_override and ENV == "development"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cutoff time ({cutoff.strftime('%Y-%m-%d %H:%M UTC')}) has passed. You cannot change your skip status.",
+            detail=f"Cutoff time has passed for this meal. Status is locked 3 hours prior to service.",
         )
 
     existing_skip = session.exec(
@@ -185,4 +188,3 @@ def unmark_meal_skip(
         is_skipped=False,
         message="Skip cancelled. You are marked as EATING this meal.",
     )
-
