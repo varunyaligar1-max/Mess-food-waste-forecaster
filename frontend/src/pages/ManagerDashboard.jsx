@@ -7,15 +7,16 @@ import {
   Users,
   UserX,
   TrendingUp,
-  BrainCircuit,
-  PlusCircle,
-  FileText,
+  FileCheck2,
   X,
   Loader2,
   RefreshCw,
   BarChart2,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   BarChart,
@@ -41,7 +42,7 @@ export default function ManagerDashboard() {
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal state for logging actuals
+  // Closeout / Reconciliation Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [activeMeal, setActiveMeal] = useState(null);
   const [actualForm, setActualForm] = useState({
@@ -58,7 +59,7 @@ export default function ManagerDashboard() {
       const data = await managerAPI.getForecast(date);
       setForecastData(data);
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to fetch manager forecast', 'error');
+      addToast(err.response?.data?.detail || 'Failed to fetch headcount forecast', 'error');
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ export default function ManagerDashboard() {
       setActualForm({
         cooked_plates: meal.suggested_cook_plates.toString(),
         served_plates: meal.predicted_headcount.toString(),
-        leftover_kg: '1.0',
+        leftover_kg: '1.2',
         notes: '',
       });
     }
@@ -103,7 +104,7 @@ export default function ManagerDashboard() {
     const leftover = parseFloat(actualForm.leftover_kg);
 
     if (isNaN(cooked) || isNaN(served)) {
-      addToast('Please enter valid plate numbers', 'error');
+      addToast('Please enter valid plate counts', 'error');
       return;
     }
 
@@ -116,11 +117,11 @@ export default function ManagerDashboard() {
         leftover_kg: isNaN(leftover) ? 0.0 : Math.max(0, leftover),
         notes: actualForm.notes || null,
       });
-      addToast(`Actuals recorded for ${activeMeal.meal_type}!`, 'success');
+      addToast(`Meal reconciliation logged for ${activeMeal.meal_type}!`, 'success');
       setModalOpen(false);
       fetchForecast(selectedDate);
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to record meal actuals', 'error');
+      addToast(err.response?.data?.detail || 'Failed to log meal reconciliation', 'error');
     } finally {
       setSubmittingActual(false);
     }
@@ -134,229 +135,202 @@ export default function ManagerDashboard() {
 
   const chartData = meals.map((m) => ({
     name: m.meal_type.charAt(0).toUpperCase() + m.meal_type.slice(1),
-    'Predicted Headcount': m.predicted_headcount,
-    'Suggested Cook Plates': m.suggested_cook_plates,
-    'Actual Served Plates': m.actual ? m.actual.served_plates : null,
+    'Recommended Production': m.suggested_cook_plates,
+    'Forecasted Turnout': m.predicted_headcount,
+    'Dispensed Plates': m.actual ? m.actual.served_plates : null,
   }));
 
   const isToday = selectedDate === getLocalDateString();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Top Controls: Date Picker + Quick Shift Buttons */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 text-xs font-bold uppercase tracking-wider">
-              Manager Portal
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Aggregated Kitchen Guidance</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-            Mess Headcount & Cook Forecaster
-          </h1>
-        </div>
-
-        {/* Date Selector Navigation */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm p-1">
-            <button
-              onClick={() => changeDateByDays(-1)}
-              title="Previous day"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-2 px-2.5">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="text-xs font-bold text-slate-700 bg-transparent focus:outline-none"
-              />
-            </div>
-            <button
-              onClick={() => changeDateByDays(1)}
-              title="Next day"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {!isToday && (
-            <button
-              onClick={() => setSelectedDate(getLocalDateString())}
-              className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition-colors"
-            >
-              Jump to Today
-            </button>
-          )}
-
-          <button
-            onClick={() => fetchForecast(selectedDate)}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Mess Students</span>
-            <Users className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900">{totalStudents}</div>
-          <span className="text-[11px] text-slate-400 font-medium">Registered hostel inmates</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Registered Skips</span>
-            <UserX className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-2xl font-black text-amber-600">{totalSkips}</div>
-          <span className="text-[11px] text-slate-400 font-medium">Marked by students for {selectedDate}</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Predicted Headcount</span>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-600">{totalPredicted}</div>
-          <span className="text-[11px] text-slate-400 font-medium">Across all scheduled meals</span>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Suggested Cook Total</span>
-            <ChefHat className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="text-2xl font-black text-purple-600">{totalSuggestedCook} plates</div>
-          <span className="text-[11px] text-slate-400 font-medium">Includes 5% safety buffer</span>
-        </div>
-      </div>
-
-      {/* Main Forecast Guidance Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Institutional Header & Operations Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-extrabold text-slate-900">
-              Kitchen Headcount Guidance ({selectedDate})
-            </h2>
-            <p className="text-xs text-slate-400">
-              Student privacy protected: aggregated counts only.
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Kitchen Operations Command
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-xs text-slate-600 font-medium">Hostel Dining Hall 1</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mt-0.5">
+              Production Planning & Headcount Guidance
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Data-backed meal preparation quotas factoring in advance student opt-outs and historical turnout variance.
             </p>
+          </div>
+
+          {/* Date Picker Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
+              <button
+                onClick={() => changeDateByDays(-1)}
+                title="Previous Day"
+                className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2 px-2">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                />
+              </div>
+              <button
+                onClick={() => changeDateByDays(1)}
+                title="Next Day"
+                className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {!isToday && (
+              <button
+                onClick={() => setSelectedDate(getLocalDateString())}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                Today
+              </button>
+            )}
+
+            <button
+              onClick={() => fetchForecast(selectedDate)}
+              disabled={loading}
+              className="p-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
+              title="Refresh forecasts"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Operational Indicators Row */}
+        <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+            <span className="text-slate-500 text-[11px] block">Active Residents Enrolled</span>
+            <span className="font-bold text-slate-900 text-sm">{totalStudents} Diners</span>
+          </div>
+          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+            <span className="text-slate-500 text-[11px] block">Advance Opt-Outs Today</span>
+            <span className="font-bold text-amber-700 text-sm">{totalSkips} Declarations</span>
+          </div>
+          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+            <span className="text-slate-500 text-[11px] block">Net Projected Turnout</span>
+            <span className="font-bold text-emerald-700 text-sm">{totalPredicted} Plates</span>
+          </div>
+          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+            <span className="text-slate-500 text-[11px] block">Recommended Prep (+5% buffer)</span>
+            <span className="font-bold text-purple-700 text-sm">{totalSuggestedCook} Plates</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Guidance Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900">
+              Daily Kitchen Preparation Quotas ({selectedDate})
+            </h2>
+            <span className="text-[10px] font-mono uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+              Aggregates Only • Student Privacy Enforced
+            </span>
           </div>
         </div>
 
         {loading && !forecastData ? (
           <div className="p-12 text-center text-slate-400">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600 mb-2" />
-            <span className="text-xs font-semibold">Calculating headcount predictions...</span>
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600 mb-2" />
+            <span className="text-xs font-medium">Computing headcount variance...</span>
           </div>
         ) : meals.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
-            <p className="text-sm font-semibold">No meals scheduled for {selectedDate}</p>
-            <p className="text-xs text-slate-400 mt-1">Try picking a date between today and the next 3 days, or click "Jump to Today".</p>
+            <p className="text-xs font-semibold">No meals scheduled for {selectedDate}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3.5 px-5">Meal Slot</th>
-                  <th className="py-3.5 px-5">Menu</th>
-                  <th className="py-3.5 px-4 text-center">Skips</th>
-                  <th className="py-3.5 px-4 text-center">Predicted Headcount</th>
-                  <th className="py-3.5 px-4 text-center">Suggested Cook</th>
-                  <th className="py-3.5 px-4 text-center">Method</th>
-                  <th className="py-3.5 px-4 text-center">Actuals Logged</th>
-                  <th className="py-3.5 px-5 text-right">Action</th>
+                  <th className="py-3 px-4">Slot & Timing</th>
+                  <th className="py-3 px-4">Scheduled Menu</th>
+                  <th className="py-3 px-3 text-center">Opt-Outs</th>
+                  <th className="py-3 px-3 text-center">Projected Turnout</th>
+                  <th className="py-3 px-3 text-center">Recommended Prep</th>
+                  <th className="py-3 px-3 text-center">Method</th>
+                  <th className="py-3 px-3 text-center">Reconciliation Status</th>
+                  <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {meals.map((meal) => (
-                  <tr key={meal.meal_id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-5">
-                      <span className="font-extrabold text-slate-900 capitalize block">
-                        {meal.meal_type}
-                      </span>
-                      <span className="text-[11px] text-slate-400">
+                  <tr key={meal.meal_id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      <span className="capitalize block text-sm font-bold">{meal.meal_type}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">
                         Cutoff: {new Date(meal.cutoff_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </td>
-                    <td className="py-4 px-5 max-w-xs">
-                      <p className="text-xs text-slate-700 font-medium truncate" title={meal.menu_text}>
+                    <td className="py-3.5 px-4 max-w-xs text-slate-700">
+                      <p className="truncate font-medium" title={meal.menu_text}>
                         {meal.menu_text}
                       </p>
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-extrabold border border-amber-200">
+                    <td className="py-3.5 px-3 text-center">
+                      <span className="font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
                         {meal.registered_skips}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-center font-extrabold text-slate-900 text-base">
+                    <td className="py-3.5 px-3 text-center font-bold text-slate-900 text-sm">
                       {meal.predicted_headcount}
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-block px-3 py-1 rounded-lg bg-purple-50 text-purple-800 text-sm font-extrabold border border-purple-200">
+                    <td className="py-3.5 px-3 text-center">
+                      <span className="font-mono font-bold text-purple-900 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded text-sm">
                         {meal.suggested_cook_plates}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-3.5 px-3 text-center">
                       {meal.method === 'learned' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          <BrainCircuit className="w-3 h-3 text-emerald-600" />
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           Learned Correction
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                          Baseline Buffer
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          Baseline +5%
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-3.5 px-3 text-center">
                       {meal.actual ? (
-                        <div className="text-xs">
-                          <span className="font-bold text-slate-900">
-                            {meal.actual.served_plates} served
+                        <div className="text-[11px]">
+                          <span className="font-semibold text-slate-900">
+                            {meal.actual.cooked_plates} prepared • {meal.actual.served_plates} dispensed
                           </span>
-                          <span className="text-[11px] text-slate-400 block">
-                            ({meal.actual.leftover_kg} kg left)
+                          <span className="text-slate-400 block font-mono">
+                            Surplus: {meal.actual.leftover_kg} kg
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Pending</span>
+                        <span className="text-slate-400 italic">Pending Closeout</span>
                       )}
                     </td>
-                    <td className="py-4 px-5 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => openLogModal(meal)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm ${
                           meal.actual
-                            ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                             : 'bg-emerald-600 text-white hover:bg-emerald-700'
                         }`}
                       >
-                        {meal.actual ? (
-                          <>
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Edit Actuals</span>
-                          </>
-                        ) : (
-                          <>
-                            <PlusCircle className="w-3.5 h-3.5" />
-                            <span>Log Actuals</span>
-                          </>
-                        )}
+                        {meal.actual ? 'Edit Reconciliation' : 'Reconcile Meal'}
                       </button>
                     </td>
                   </tr>
@@ -367,72 +341,70 @@ export default function ManagerDashboard() {
         )}
       </div>
 
-      {/* Daily Visual Chart */}
+      {/* Production Chart */}
       {meals.length > 0 && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm min-w-0">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-purple-600" />
-                Predicted vs Suggested vs Actual Breakdown ({selectedDate})
-              </h3>
-              <p className="text-xs text-slate-400">
-                Visual plate distribution per meal slot.
-              </p>
-            </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm min-w-0">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-slate-700" />
+              Turnout Variance vs Production Quotas ({selectedDate})
+            </h3>
+            <p className="text-xs text-slate-400">
+              Visual comparison between kitchen preparation quotas and actual plates dispensed to diners.
+            </p>
           </div>
 
-          <div className="h-72 w-full min-h-[250px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
-              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+          <div className="h-64 w-full min-h-[240px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+              <BarChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#0f172a',
                     borderColor: '#1e293b',
-                    borderRadius: '12px',
+                    borderRadius: '8px',
                     color: '#fff',
-                    fontSize: '12px',
+                    fontSize: '11px',
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                <Bar dataKey="Suggested Cook Plates" fill="#a855f7" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Predicted Headcount" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Actual Served Plates" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                <Bar dataKey="Recommended Production" fill="#9333ea" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Forecasted Turnout" fill="#059669" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Dispensed Plates" fill="#2563eb" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* Log Actuals Modal */}
+      {/* Reconciliation Modal */}
       {modalOpen && activeMeal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 capitalize">
-                  Log Actuals: {activeMeal.meal_type}
+                <h3 className="text-base font-bold text-slate-900 capitalize">
+                  Meal Closeout: {activeMeal.meal_type}
                 </h3>
-                <span className="text-xs text-slate-400 font-medium">
-                  {selectedDate} • {activeMeal.menu_text.substring(0, 35)}...
+                <span className="text-xs text-slate-500 font-mono">
+                  {selectedDate} • {activeMeal.menu_text.substring(0, 30)}...
                 </span>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveActuals} className="mt-5 space-y-4">
+            <form onSubmit={handleSaveActuals} className="mt-4 space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Cooked Plates *
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Plates Cooked / Prepared *
                   </label>
                   <input
                     type="number"
@@ -442,16 +414,16 @@ export default function ManagerDashboard() {
                     onChange={(e) =>
                       setActualForm((prev) => ({ ...prev, cooked_plates: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono font-bold focus:ring-2 focus:ring-emerald-500"
                   />
                   <span className="text-[10px] text-slate-400">
-                    Suggested: {activeMeal.suggested_cook_plates}
+                    Recommended was: {activeMeal.suggested_cook_plates}
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Served Plates *
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Plates Dispensed / Served *
                   </label>
                   <input
                     type="number"
@@ -461,17 +433,17 @@ export default function ManagerDashboard() {
                     onChange={(e) =>
                       setActualForm((prev) => ({ ...prev, served_plates: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono font-bold focus:ring-2 focus:ring-emerald-500"
                   />
                   <span className="text-[10px] text-slate-400">
-                    Predicted: {activeMeal.predicted_headcount}
+                    Forecast was: {activeMeal.predicted_headcount}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Leftover Food Weight (kg)
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Surplus / Food Waste Discarded (kg)
                 </label>
                 <input
                   type="number"
@@ -482,13 +454,13 @@ export default function ManagerDashboard() {
                     setActualForm((prev) => ({ ...prev, leftover_kg: e.target.value }))
                   }
                   placeholder="e.g. 1.2"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Kitchen Notes
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Shift Supervisor Notes
                 </label>
                 <textarea
                   rows="2"
@@ -496,8 +468,8 @@ export default function ManagerDashboard() {
                   onChange={(e) =>
                     setActualForm((prev) => ({ ...prev, notes: e.target.value }))
                   }
-                  placeholder="e.g. Heavy rain during lunch; extra students stayed in"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-emerald-500"
+                  placeholder="e.g. Heavy rain during service; extra students ate indoors"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -505,16 +477,16 @@ export default function ManagerDashboard() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingActual}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-md disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50"
                 >
-                  {submittingActual ? 'Saving...' : 'Save Actuals'}
+                  {submittingActual ? 'Saving...' : 'Save Closeout Log'}
                 </button>
               </div>
             </form>

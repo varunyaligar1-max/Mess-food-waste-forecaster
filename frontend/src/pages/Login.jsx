@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
-import { UtensilsCrossed, Lock, Mail, Loader2, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { Utensils, Lock, Mail, Loader2, ArrowRight, Building2, User, KeyRound } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(null); // 'student' or 'manager'
+  const [demoLoading, setDemoLoading] = useState(null);
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function Login() {
     try {
       setLoading(true);
       const user = await login(loginEmail, loginPassword);
-      addToast(`Welcome back, ${user.name}!`, 'success');
+      addToast(`Authenticated as ${user.name}`, 'success');
       if (user.role === 'manager') {
         navigate('/manager');
       } else {
@@ -25,7 +25,7 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      const msg = err.response?.data?.detail || err.message || 'Login failed. Please check your credentials.';
+      const msg = err.response?.data?.detail || err.message || 'Authentication failed. Please verify credentials.';
       addToast(msg, 'error');
     } finally {
       setLoading(false);
@@ -36,7 +36,7 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!email || !password) {
-      addToast('Please enter both email and password', 'error');
+      addToast('Please enter your email and password', 'error');
       return;
     }
     handleLogin(email, password);
@@ -50,69 +50,66 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xl shadow-emerald-600/20 mb-4">
-          <UtensilsCrossed className="w-7 h-7" />
+        <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-3.5 shadow-sm">
+          <Utensils className="w-6 h-6" />
         </div>
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Mess Food-Waste Forecaster
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Smart skip declarations & ML headcount prediction for hostel messes
+        <h1 className="text-xl font-bold tracking-tight text-white">
+          Hostel Dining Services Portal
+        </h1>
+        <p className="mt-1 text-xs text-slate-400">
+          Meal Headcount Forecasting & Operational Waste Reduction
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
-          {/* 1-Click Instant Demo Access (Prominently Placed at the Top) */}
-          <div className="mb-6 pb-6 border-b border-slate-100">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-center mb-3">
-              ⚡ Instant 1-Click Demo Login
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-slate-950/80 border border-slate-800 py-7 px-5 shadow-xl sm:rounded-2xl sm:px-8">
+          {/* Quick Evaluation Role Switcher */}
+          <div className="mb-6 pb-5 border-b border-slate-800">
+            <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block text-center mb-2.5">
+              Evaluation Sandbox • Instant 1-Click Login
             </span>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 disabled={loading}
                 onClick={() => handle1ClickDemo('student1@hostel.com', 'student123', 'student')}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-all shadow-sm disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:border-emerald-500 hover:text-emerald-400 transition-all disabled:opacity-50"
               >
                 {demoLoading === 'student' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                 ) : (
-                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <User className="w-3.5 h-3.5 text-emerald-400" />
                 )}
-                <span>Student Demo</span>
+                <span>Student Resident</span>
               </button>
 
               <button
                 type="button"
                 disabled={loading}
                 onClick={() => handle1ClickDemo('manager@mess.com', 'manager123', 'manager')}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition-all shadow-sm disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:border-purple-500 hover:text-purple-400 transition-all disabled:opacity-50"
               >
                 {demoLoading === 'manager' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
                 ) : (
-                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <KeyRound className="w-3.5 h-3.5 text-purple-400" />
                 )}
-                <span>Manager Demo</span>
+                <span>Mess In-Charge</span>
               </button>
             </div>
-            <p className="text-[11px] text-center text-slate-400 mt-2">
-              Click either button to log in immediately without typing credentials.
-            </p>
           </div>
 
-          {/* Regular Manual Credentials Form */}
+          {/* Standard Institutional Sign In Form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Email Address
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Institutional Email
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
                 </div>
                 <input
                   type="email"
@@ -120,18 +117,18 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="student1@hostel.com"
-                  className="block w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400 transition-all"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Password
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
                 </div>
                 <input
                   type="password"
@@ -139,7 +136,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400 transition-all"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
@@ -147,27 +144,27 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50 mt-2"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors shadow-sm disabled:opacity-50 mt-2"
             >
               {loading && !demoLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing In...</span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Verifying Credentials...</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In with Email</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Sign In</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500">
-              New student in the hostel?{' '}
-              <Link to="/register" className="font-semibold text-emerald-600 hover:text-emerald-700">
-                Register here
+          <div className="mt-5 text-center pt-4 border-t border-slate-800/80">
+            <p className="text-xs text-slate-400">
+              New resident student?{' '}
+              <Link to="/register" className="font-semibold text-emerald-400 hover:text-emerald-300">
+                Register hostel ID
               </Link>
             </p>
           </div>

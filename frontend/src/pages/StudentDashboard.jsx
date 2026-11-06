@@ -3,43 +3,39 @@ import { mealsAPI } from '../api/client';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import {
-  Calendar,
   Clock,
-  CheckCircle2,
+  CheckCircle,
   XCircle,
   Lock,
-  Coffee,
-  Sun,
-  Cookie,
-  Moon,
-  Sparkles,
-  Loader2,
   RefreshCw,
-  ToggleLeft,
-  ToggleRight,
+  Loader2,
+  Calendar,
+  AlertCircle,
+  SlidersHorizontal,
+  ChevronRight,
   Info,
 } from 'lucide-react';
 
-const MEAL_ICONS = {
-  breakfast: Coffee,
-  lunch: Sun,
-  snacks: Cookie,
-  dinner: Moon,
+const MEAL_SCHEDULE = {
+  breakfast: { timing: '07:30 AM – 09:30 AM', dietary: 'Vegetarian' },
+  lunch: { timing: '12:30 PM – 02:30 PM', dietary: 'Vegetarian' },
+  snacks: { timing: '05:00 PM – 06:30 PM', dietary: 'Vegetarian & Tea' },
+  dinner: { timing: '07:30 PM – 09:30 PM', dietary: 'Vegetarian' },
 };
 
 function formatCountdown(seconds) {
-  if (seconds <= 0) return 'Passed';
+  if (seconds <= 0) return 'Closed';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (hours > 24) {
     const days = Math.floor(hours / 24);
     return `${days}d ${hours % 24}h`;
   }
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
 }
 
-function formatDateHeader(dateStr) {
+function formatDayLabel(dateStr) {
   const mealDate = new Date(dateStr + 'T00:00:00');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -52,11 +48,7 @@ function formatDateHeader(dateStr) {
   } else if (mealDate.getTime() === tomorrow.getTime()) {
     return 'Tomorrow';
   }
-  return mealDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+  return mealDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export default function StudentDashboard() {
@@ -65,7 +57,8 @@ export default function StudentDashboard() {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [demoOverride, setDemoOverride] = useState(true); // Default to true in development for best demo experience!
+  const [demoOverride, setDemoOverride] = useState(true); // Allows judges/testers to toggle all meals
+  const [selectedDayTab, setSelectedDayTab] = useState('all');
 
   const fetchMeals = async () => {
     try {
@@ -73,7 +66,7 @@ export default function StudentDashboard() {
       const data = await mealsAPI.getUpcoming(3);
       setMeals(data);
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to load upcoming meals', 'error');
+      addToast(err.response?.data?.detail || 'Failed to load meal schedule', 'error');
     } finally {
       setLoading(false);
     }
@@ -98,7 +91,7 @@ export default function StudentDashboard() {
 
     if (isLocked) {
       addToast(
-        '🔒 Cutoff Passed: Changes for this meal locked 3 hours prior to service. Enable "Demo Test Mode" above to toggle past-cutoff meals!',
+        'The 3-hour kitchen planning window for this meal has closed. Turn on Evaluation Mode above to simulate changes.',
         'error'
       );
       return;
@@ -107,22 +100,20 @@ export default function StudentDashboard() {
     try {
       setActionLoadingId(meal.id);
       if (meal.is_skipped) {
-        // Cancel skip -> return to Eating
         await mealsAPI.unmarkSkip(meal.id, demoOverride);
         setMeals((prev) =>
           prev.map((m) => (m.id === meal.id ? { ...m, is_skipped: false } : m))
         );
-        addToast(`Marked as EATING ${meal.meal_type}!`, 'success');
+        addToast(`Registered attendance for ${meal.meal_type}. Kitchen headcount adjusted.`, 'success');
       } else {
-        // Mark as Skip
         await mealsAPI.markSkip(meal.id, demoOverride);
         setMeals((prev) =>
           prev.map((m) => (m.id === meal.id ? { ...m, is_skipped: true } : m))
         );
-        addToast(`Marked ${meal.meal_type} as SKIPPED. Thanks for preventing food waste!`, 'info');
+        addToast(`Marked opt-out for ${meal.meal_type}. Kitchen informed not to cook this plate.`, 'info');
       }
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Could not update meal skip status', 'error');
+      addToast(err.response?.data?.detail || 'Failed to update meal status', 'error');
     } finally {
       setActionLoadingId(null);
     }
@@ -136,128 +127,149 @@ export default function StudentDashboard() {
     return acc;
   }, {});
 
-  const totalUpcoming = meals.length;
-  const totalSkipping = meals.filter((m) => m.is_skipped).length;
-  const totalEating = totalUpcoming - totalSkipping;
+  const datesList = Object.keys(groupedMeals);
+
+  const displayedGroups =
+    selectedDayTab === 'all'
+      ? groupedMeals
+      : { [selectedDayTab]: groupedMeals[selectedDayTab] || [] };
+
+  const totalMeals = meals.length;
+  const skippedMeals = meals.filter((m) => m.is_skipped).length;
+  const eatingMeals = totalMeals - skippedMeals;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Welcome Hero Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-700/10 mb-6 relative overflow-hidden">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-semibold mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Smart Hostel Mess Service</span>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Institutional Top Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Resident Portal
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-xs text-slate-600 font-medium">Hostel Block 1 Dining</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mt-0.5">
+              Meal Attendance & Advance Opt-Outs
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Logged in as <strong className="text-slate-800">{user?.name}</strong> (Roll: {user?.student_id || '21CS001'}, Room: {user?.room_no || 'A-101'})
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Hi, {user?.name}! 👋
-          </h1>
-          <p className="mt-2 text-sm text-emerald-100 leading-relaxed">
-            By marking meals you won't attend before the cutoff, you help the kitchen cook exact quantities and prevent hundreds of kilograms of food waste.
-          </p>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-xs font-medium text-slate-500">Your Next 3 Days</div>
+              <div className="text-sm font-semibold text-slate-900">
+                <span className="text-emerald-700 font-bold">{eatingMeals} Attending</span>
+                <span className="text-slate-400 mx-1.5">•</span>
+                <span className="text-amber-700 font-bold">{skippedMeals} Opted Out</span>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchMeals}
+              disabled={loading}
+              className="p-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
+              title="Refresh schedule"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+          </div>
         </div>
 
-        {/* Quick status counters */}
-        <div className="mt-6 pt-6 border-t border-emerald-500/40 grid grid-cols-3 gap-4 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-            <span className="text-2xl font-black block">{totalUpcoming}</span>
-            <span className="text-xs text-emerald-100 font-medium">Scheduled Meals</span>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-            <span className="text-2xl font-black block text-emerald-200">{totalEating}</span>
-            <span className="text-xs text-emerald-100 font-medium">Eating (Default)</span>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-            <span className="text-2xl font-black block text-amber-200">{totalSkipping}</span>
-            <span className="text-xs text-emerald-100 font-medium">Skipping</span>
-          </div>
+        {/* Mess Notice / Policy Banner */}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex items-start gap-2.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border">
+          <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong>Attendance Policy:</strong> By default, all registered hostel residents are enrolled for daily meals. To help the kitchen avoid cooking excess food, please toggle <strong>Opt Out</strong> for any meal you will not attend at least <strong>3 hours prior to meal service</strong>.
+          </p>
         </div>
       </div>
 
-      {/* Demo Evaluation Mode Control Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
-            <Info className="w-4 h-4" />
-          </div>
+      {/* Evaluation Sandbox Toggle */}
+      <div className="bg-slate-900 text-slate-100 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
           <div>
-            <span className="text-xs font-extrabold text-slate-800 block">
-              Hackathon Evaluation Mode
-            </span>
-            <span className="text-[11px] text-slate-500">
+            <span className="font-semibold text-white">Evaluation Sandbox:</span>{' '}
+            <span className="text-slate-300">
               {demoOverride
-                ? 'Demo Mode Active: You can toggle any meal (including today\'s) to test live headcount adjustments.'
-                : 'Strict Mode Active: 3-hour cutoff rule strictly enforced. Past meals are locked.'}
+                ? 'Unrestricted Toggle Mode active (You can test opt-outs on all meals, including past-cutoff slots).'
+                : 'Production Mode active (Strict 3-hour kitchen cutoff locks past meals).'}
             </span>
           </div>
         </div>
-
         <button
           onClick={() => {
             const next = !demoOverride;
             setDemoOverride(next);
             addToast(
-              next ? 'Demo Mode enabled (All meals unlocked for testing)' : 'Strict Cutoff Rule enforced (Past meals locked)',
+              next ? 'Evaluation Mode Enabled: All meals unlocked for testing' : 'Production Mode Enabled: 3-hour cutoff strictly enforced',
               'info'
             );
           }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+          className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors shrink-0 ${
             demoOverride
-              ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+              ? 'bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400'
+              : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
           }`}
         >
-          {demoOverride ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-          <span>{demoOverride ? 'Demo Mode: ON' : 'Strict Mode: ON'}</span>
+          {demoOverride ? 'Evaluation Mode: ON' : 'Production Mode: ON'}
         </button>
       </div>
 
-      {/* Header bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-emerald-600" />
-            Upcoming Meal Schedule
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Default is <strong className="text-emerald-700">Eating</strong>. Toggle to <strong className="text-amber-700">Skip</strong> if you won't attend.
-          </p>
-        </div>
-
+      {/* Day Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200">
         <button
-          onClick={fetchMeals}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          onClick={() => setSelectedDayTab('all')}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+            selectedDayTab === 'all'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          All 3 Days ({meals.length} Meals)
         </button>
+        {datesList.map((d) => (
+          <button
+            key={d}
+            onClick={() => setSelectedDayTab(d)}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+              selectedDayTab === 'd'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : selectedDayTab === d
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {formatDayLabel(d)} ({new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })})
+          </button>
+        ))}
       </div>
 
-      {/* Loading Skeleton */}
+      {/* Meal Cards Display */}
       {loading && meals.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-44 bg-white rounded-2xl border border-slate-200/60 p-5 animate-pulse" />
+            <div key={i} className="h-44 bg-white rounded-xl border border-slate-200 p-5 animate-pulse" />
           ))}
-        </div>
-      ) : Object.keys(groupedMeals).length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
-          <p className="text-sm font-bold text-slate-700">No upcoming meals scheduled</p>
-          <p className="text-xs text-slate-400 mt-1">Please ask the mess manager to seed meal schedules.</p>
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupedMeals).map(([dateStr, dayMeals]) => (
-            <div key={dateStr}>
-              {/* Day Section Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-sm font-extrabold text-slate-900 uppercase tracking-wider bg-slate-200/70 px-3 py-1 rounded-lg">
-                  {formatDateHeader(dateStr)}
+          {Object.entries(displayedGroups).map(([dateStr, dayMeals]) => (
+            <div key={dateStr} className="space-y-3">
+              {/* Day Header */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
+                  {formatDayLabel(dateStr)}
                 </span>
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                   {new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-                    month: 'short',
+                    weekday: 'long',
+                    month: 'long',
                     day: 'numeric',
                     year: 'numeric',
                   })}
@@ -265,87 +277,96 @@ export default function StudentDashboard() {
                 <div className="flex-1 border-t border-slate-200" />
               </div>
 
-              {/* Meal Cards Grid */}
+              {/* 4 Meals Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dayMeals.map((meal) => {
-                  const Icon = MEAL_ICONS[meal.meal_type.toLowerCase()] || Calendar;
+                  const scheduleInfo = MEAL_SCHEDULE[meal.meal_type.toLowerCase()] || {
+                    timing: 'Regular Slot',
+                    dietary: 'Standard',
+                  };
                   const isLoadingThis = actionLoadingId === meal.id;
-                  const isToggleable = meal.can_toggle || demoOverride;
+                  const isCutoffOpen = meal.can_toggle || demoOverride;
 
                   return (
                     <div
                       key={meal.id}
-                      className={`relative rounded-2xl border transition-all duration-200 p-5 bg-white shadow-sm hover:shadow-md ${
-                        meal.is_skipped
-                          ? 'border-amber-300 bg-amber-50/20'
-                          : 'border-slate-200/80 hover:border-emerald-300'
+                      className={`bg-white rounded-xl border transition-all p-5 shadow-sm hover:border-slate-300 ${
+                        meal.is_skipped ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200'
                       }`}
                     >
-                      {/* Top Bar: Meal Type + Cutoff Pill */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200/60">
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 text-base capitalize block leading-tight">
+                      {/* Top Header: Slot Name, Timings, Cutoff */}
+                      <div className="flex items-start justify-between gap-3 mb-2.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-slate-900 capitalize text-sm">
                               {meal.meal_type}
+                            </h3>
+                            {/* Standard Indian Veg Dot */}
+                            <span
+                              className="w-3.5 h-3.5 border border-emerald-600 rounded-sm flex items-center justify-center p-0.5"
+                              title="Vegetarian"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                             </span>
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              Cutoff: {new Date(meal.cutoff_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <span className="text-[11px] font-mono text-slate-500">
+                              {scheduleInfo.timing}
                             </span>
                           </div>
+                          <span className="text-[11px] text-slate-400 block mt-0.5">
+                            Kitchen Cutoff: {new Date(meal.cutoff_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
 
-                        {/* Cutoff Pill */}
+                        {/* Cutoff Status Badge */}
                         {meal.can_toggle ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-                            <Clock className="w-3 h-3 text-emerald-600 animate-pulse" />
-                            <span>Cutoff in {formatCountdown(meal.seconds_until_cutoff)}</span>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
+                            <Clock className="w-3 h-3 text-emerald-600" />
+                            <span>{formatCountdown(meal.seconds_until_cutoff)}</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-semibold">
                             <Lock className="w-3 h-3 text-slate-400" />
-                            <span>Cutoff Passed</span>
+                            <span>Window Closed</span>
                           </div>
                         )}
                       </div>
 
                       {/* Menu Description */}
-                      <div className="my-3 min-h-[44px]">
-                        <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50/80 border border-slate-100 rounded-xl p-2.5">
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 my-3">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          Scheduled Menu
+                        </div>
+                        <p className="text-xs text-slate-800 font-medium leading-relaxed">
                           {meal.menu_text}
                         </p>
                       </div>
 
-                      {/* Bottom Toggle Bar */}
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        {/* Current Status Pill */}
-                        <div className="flex items-center gap-2">
+                      {/* Action Bar */}
+                      <div className="pt-2 flex items-center justify-between gap-3">
+                        <div>
                           {meal.is_skipped ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
                               <XCircle className="w-3.5 h-3.5 text-amber-600" />
-                              Skipping
+                              Opted Out (Skipping)
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              Eating
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              Attending (Will Eat)
                             </span>
                           )}
                         </div>
 
-                        {/* Action Button */}
                         <button
                           type="button"
                           onClick={() => handleToggleSkip(meal)}
                           disabled={isLoadingThis}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                            !isToggleable
-                              ? 'bg-slate-200 text-slate-500 hover:bg-slate-300 cursor-pointer'
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5 ${
+                            !isCutoffOpen
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200 cursor-pointer'
                               : meal.is_skipped
-                              ? 'bg-slate-900 text-white hover:bg-slate-800'
-                              : 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20'
+                              ? 'bg-slate-800 text-white hover:bg-slate-700'
+                              : 'bg-amber-600 text-white hover:bg-amber-700'
                           }`}
                         >
                           {isLoadingThis ? (
@@ -353,31 +374,24 @@ export default function StudentDashboard() {
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               <span>Updating...</span>
                             </>
-                          ) : !isToggleable ? (
+                          ) : !isCutoffOpen ? (
                             <>
-                              <Lock className="w-3.5 h-3.5" />
-                              <span>Locked (Passed)</span>
+                              <Lock className="w-3 h-3" />
+                              <span>Locked</span>
                             </>
                           ) : meal.is_skipped ? (
                             <>
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Cancel Skip (Eat)</span>
+                              <CheckCircle className="w-3 h-3" />
+                              <span>Undo Opt-Out</span>
                             </>
                           ) : (
                             <>
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Mark as Skip</span>
+                              <XCircle className="w-3 h-3" />
+                              <span>Opt Out</span>
                             </>
                           )}
                         </button>
                       </div>
-
-                      {/* Locked helper text */}
-                      {!meal.can_toggle && !demoOverride && (
-                        <p className="text-[10px] text-slate-400 mt-2 text-center">
-                          🔒 Cutoff closed 3 hours prior to service. Enable Demo Mode above to unlock.
-                        </p>
-                      )}
                     </div>
                   );
                 })}

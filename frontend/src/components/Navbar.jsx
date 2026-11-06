@@ -4,14 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { adminAPI } from '../api/client';
 import {
-  UtensilsCrossed,
-  BarChart3,
-  CalendarDays,
+  Utensils,
+  BarChart2,
+  CalendarCheck2,
   LogOut,
   Database,
   Loader2,
   Menu,
   X,
+  Building2,
+  UserCheck,
+  Shield,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -25,17 +28,17 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     navigate('/login');
-    addToast('Logged out successfully', 'info');
+    addToast('Logged out of dining portal', 'info');
   };
 
   const handleSeed = async () => {
     try {
       setSeeding(true);
       await adminAPI.seed(true);
-      addToast('Demo database re-seeded successfully with 14 days of data!', 'success');
+      addToast('Demo database refreshed with 14 days of historical logs!', 'success');
       window.location.reload();
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to seed database', 'error');
+      addToast(err.response?.data?.detail || 'Failed to refresh demo data', 'error');
     } finally {
       setSeeding(false);
     }
@@ -46,40 +49,45 @@ export default function Navbar() {
   const isManager = user.role === 'manager';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-7">
           <Link
             to={isManager ? '/manager' : '/student'}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center gap-3 group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <UtensilsCrossed className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Utensils className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">
-                Mess<span className="text-emerald-600">Waste</span>
-              </span>
-              <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-                Hostel Forecaster
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm tracking-tight text-white block leading-tight">
+                  Hostel Dining Services
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                  Hall 1
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400 block font-normal">
+                Meal Headcount & Waste Forecaster
               </span>
             </div>
           </Link>
 
           {/* Nav Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1.5 pl-4 border-l border-slate-800">
             {!isManager && (
               <Link
                 to="/student"
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 ${
                   location.pathname === '/student'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-slate-800 text-emerald-400 border border-slate-700'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
-                <CalendarDays className="w-4 h-4" />
-                Upcoming Meals
+                <CalendarCheck2 className="w-3.5 h-3.5 text-emerald-400" />
+                Meal Attendance & Opt-Outs
               </Link>
             )}
 
@@ -87,85 +95,85 @@ export default function Navbar() {
               <>
                 <Link
                   to="/manager"
-                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 ${
                     location.pathname === '/manager'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'bg-slate-800 text-emerald-400 border border-slate-700'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
-                  <CalendarDays className="w-4 h-4" />
-                  Daily Forecast
+                  <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                  Kitchen Prep & Turnout
                 </Link>
                 <Link
                   to="/manager/report"
-                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 ${
                     location.pathname === '/manager/report'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'bg-slate-800 text-emerald-400 border border-slate-700'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
-                  <BarChart3 className="w-4 h-4" />
-                  Waste Analytics & Reports
+                  <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Waste & Variance Reports
                 </Link>
               </>
             )}
           </nav>
         </div>
 
-        {/* Right Tools & User */}
+        {/* Right Tools & User Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quick Demo Seed Button */}
+          {/* Quick Demo Reset Data */}
           <button
             onClick={handleSeed}
             disabled={seeding}
-            title="Reset sample data for hackathon demo"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+            title="Reload 14-day historical mess dataset"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium transition-colors disabled:opacity-50"
           >
             {seeding ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
             ) : (
-              <Database className="w-3.5 h-3.5 text-emerald-600" />
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
             )}
-            <span className="hidden sm:inline">{seeding ? 'Seeding...' : 'Reset Demo Data'}</span>
+            <span className="hidden sm:inline">{seeding ? 'Reloading...' : 'Reset Demo Data'}</span>
           </button>
 
           {/* User profile capsule */}
-          <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200">
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs">
+          <div className="flex items-center gap-2.5 pl-3 border-l border-slate-800">
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold text-xs">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div className="hidden lg:block text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-800 leading-tight">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-white leading-tight">
                   {user.name}
                 </span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider ${
                     isManager
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'bg-emerald-100 text-emerald-700'
+                      ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                      : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                   }`}
                 >
-                  {user.role}
+                  {isManager ? 'Kitchen Admin' : 'Resident'}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400 block">
-                {user.student_id ? `Roll: ${user.student_id}` : user.email}
+              <span className="text-[11px] text-slate-400 block font-mono">
+                {user.student_id ? `ID: ${user.student_id} • Room ${user.room_no || 'NA'}` : 'Mess In-Charge'}
               </span>
             </div>
 
             <button
               onClick={handleLogout}
-              title="Logout"
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1"
+              title="Sign Out"
+              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-colors ml-1"
             >
               <LogOut className="w-4 h-4" />
             </button>
 
-            {/* Mobile menu button */}
+            {/* Mobile hamburger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+              className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-md"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -173,20 +181,20 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Nav Menu Dropdown */}
+      {/* Mobile Nav Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden px-4 pt-2 pb-4 border-t border-slate-100 bg-white space-y-1">
+        <div className="md:hidden px-4 pt-2 pb-4 border-t border-slate-800 bg-slate-900 space-y-1">
           {!isManager && (
             <Link
               to="/student"
               onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3 py-2 rounded-lg text-sm font-semibold ${
+              className={`block px-3 py-2 rounded-md text-xs font-medium ${
                 location.pathname === '/student'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-800 text-emerald-400'
+                  : 'text-slate-300 hover:bg-slate-800'
               }`}
             >
-              Upcoming Meals
+              Meal Attendance & Opt-Outs
             </Link>
           )}
 
@@ -195,24 +203,24 @@ export default function Navbar() {
               <Link
                 to="/manager"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-semibold ${
+                className={`block px-3 py-2 rounded-md text-xs font-medium ${
                   location.pathname === '/manager'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-emerald-400'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                Daily Forecast
+                Kitchen Prep & Turnout
               </Link>
               <Link
                 to="/manager/report"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-semibold ${
+                className={`block px-3 py-2 rounded-md text-xs font-medium ${
                   location.pathname === '/manager/report'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-emerald-400'
+                    : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                Waste Analytics & Reports
+                Waste & Variance Reports
               </Link>
             </>
           )}

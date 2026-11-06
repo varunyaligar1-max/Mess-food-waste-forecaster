@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
-import { UtensilsCrossed, Lock, Mail, User, Hash, Home, ArrowRight, Loader2 } from 'lucide-react';
+import { Utensils, Lock, Mail, User, Hash, Home, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -31,7 +31,7 @@ export default function Register() {
     try {
       setLoading(true);
       const user = await register(formData);
-      addToast(`Registration successful! Welcome, ${user.name}`, 'success');
+      addToast(`Registration complete. Welcome, ${user.name}!`, 'success');
       if (user.role === 'manager') {
         navigate('/manager');
       } else {
@@ -45,29 +45,29 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xl shadow-emerald-600/20 mb-4">
-          <UtensilsCrossed className="w-7 h-7" />
+        <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-3.5 shadow-sm">
+          <Utensils className="w-6 h-6" />
         </div>
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Create Account
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Join the hostel meal planning network to stop food waste
+        <h1 className="text-xl font-bold tracking-tight text-white">
+          Register Hostel Resident
+        </h1>
+        <p className="mt-1 text-xs text-slate-400">
+          Enrolment for Dining Hall 1 Meal Attendance System
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
-          <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-slate-950/80 border border-slate-800 py-7 px-5 shadow-xl sm:rounded-2xl sm:px-8">
+          <form className="space-y-3.5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Full Name *
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <User className="w-5 h-5" />
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <User className="w-4 h-4" />
                 </div>
                 <input
                   type="text"
@@ -76,18 +76,18 @@ export default function Register() {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Rahul Sharma"
-                  className="block w-full pl-11 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Email Address *
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Institutional Email *
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
                 </div>
                 <input
                   type="email"
@@ -96,18 +96,18 @@ export default function Register() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="rahul@hostel.com"
-                  className="block w-full pl-11 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Password *
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
                 </div>
                 <input
                   type="password"
@@ -117,19 +117,19 @@ export default function Register() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="At least 6 characters"
-                  className="block w-full pl-11 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Roll / Student ID
                 </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Hash className="w-4 h-4" />
+                <div className="relative rounded-lg shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <Hash className="w-3.5 h-3.5" />
                   </div>
                   <input
                     type="text"
@@ -137,18 +137,18 @@ export default function Register() {
                     value={formData.student_id}
                     onChange={handleChange}
                     placeholder="21CS041"
-                    className="block w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400"
+                    className="block w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Room No
                 </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Home className="w-4 h-4" />
+                <div className="relative rounded-lg shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <Home className="w-3.5 h-3.5" />
                   </div>
                   <input
                     type="text"
@@ -156,50 +156,50 @@ export default function Register() {
                     value={formData.room_no}
                     onChange={handleChange}
                     placeholder="B-302"
-                    className="block w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400"
+                    className="block w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Account Role
               </label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-white"
+                className="block w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
               >
-                <option value="student">Student (Mark skips, view menus)</option>
-                <option value="manager">Mess Manager (Kitchen forecast & actuals)</option>
+                <option value="student">Student Resident (Attendance & Opt-Outs)</option>
+                <option value="manager">Mess Manager (Kitchen Operations & Analytics)</option>
               </select>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors shadow-sm disabled:opacity-50 mt-2"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Registering...</span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Registering Account...</span>
                 </>
               ) : (
                 <>
-                  <span>Create Account</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Complete Enrolment</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500">
-              Already registered?{' '}
-              <Link to="/login" className="font-semibold text-emerald-600 hover:text-emerald-700">
+          <div className="mt-5 text-center pt-4 border-t border-slate-800/80">
+            <p className="text-xs text-slate-400">
+              Already enrolled?{' '}
+              <Link to="/login" className="font-semibold text-emerald-400 hover:text-emerald-300">
                 Sign in here
               </Link>
             </p>
@@ -209,4 +209,3 @@ export default function Register() {
     </div>
   );
 }
-
