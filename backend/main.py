@@ -7,6 +7,8 @@ from fastapi.responses import RedirectResponse
 from backend.database import create_db_and_tables
 from backend.routers.admin import router as admin_router
 from backend.routers.auth import router as auth_router
+from backend.routers.manager import router as manager_router
+from backend.routers.meals import router as meals_router
 
 
 @asynccontextmanager
@@ -49,6 +51,8 @@ app.add_middleware(
 
 # Include Routers with /api prefix
 app.include_router(auth_router, prefix="/api")
+app.include_router(meals_router, prefix="/api")
+app.include_router(manager_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 
 
