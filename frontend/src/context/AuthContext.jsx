@@ -4,26 +4,41 @@ import { authAPI } from '../api/client';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('mess_token') || null);
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('mess_token') || null;
+  });
 
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mess_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // Validate session in background on mount if token exists
   useEffect(() => {
-    async function loadUser() {
-      if (token) {
+    async function verifySession() {
+      const savedToken = localStorage.getItem('mess_token');
+      if (savedToken && !user) {
         try {
+          setLoading(true);
           const profile = await authAPI.getMe();
           setUser(profile);
           localStorage.setItem('mess_user', JSON.stringify(profile));
         } catch (err) {
-          console.error('Failed to restore user session:', err);
+          console.warn('Session expired or invalid, logging out:', err);
           logout();
+        } finally {
+          setLoading(false);
         }
       }
-      setLoading(false);
     }
-    loadUser();
-  }, [token]);
+    verifySession();
+  }, []);
 
   const login = async (email, password) => {
     const data = await authAPI.login(email, password);
@@ -64,4 +79,3 @@ export function useAuth() {
   }
   return context;
 }
-

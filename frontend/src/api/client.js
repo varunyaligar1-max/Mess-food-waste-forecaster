@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+// Default to relative '/api' so it routes through Vite's dev proxy (same-origin, no CORS blocks)
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,10 +21,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Error:', error.response?.status, error.response?.data || error.message);
     if (error.response && error.response.status === 401) {
+      // Clear invalid token
       localStorage.removeItem('mess_token');
       localStorage.removeItem('mess_user');
-      // If unauthorized and not already on login/register page
       if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
         window.location.href = '/login';
       }
@@ -86,4 +88,3 @@ export const adminAPI = {
 };
 
 export default api;
-

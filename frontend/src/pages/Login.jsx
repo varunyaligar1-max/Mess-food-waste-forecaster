@@ -8,19 +8,15 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(null); // 'student' or 'manager'
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      addToast('Please enter both email and password', 'error');
-      return;
-    }
+  const handleLogin = async (loginEmail, loginPassword) => {
     try {
       setLoading(true);
-      const user = await login(email, password);
+      const user = await login(loginEmail, loginPassword);
       addToast(`Welcome back, ${user.name}!`, 'success');
       if (user.role === 'manager') {
         navigate('/manager');
@@ -28,15 +24,29 @@ export default function Login() {
         navigate('/student');
       }
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Invalid email or password', 'error');
+      console.error('Login error:', err);
+      const msg = err.response?.data?.detail || err.message || 'Login failed. Please check your credentials.';
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
+      setDemoLoading(null);
     }
   };
 
-  const fillCredentials = (demoEmail, demoPassword) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      addToast('Please enter both email and password', 'error');
+      return;
+    }
+    handleLogin(email, password);
+  };
+
+  const handle1ClickDemo = (demoEmail, demoPassword, role) => {
     setEmail(demoEmail);
     setPassword(demoPassword);
+    setDemoLoading(role);
+    handleLogin(demoEmail, demoPassword);
   };
 
   return (
@@ -55,7 +65,47 @@ export default function Login() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          {/* 1-Click Instant Demo Access (Prominently Placed at the Top) */}
+          <div className="mb-6 pb-6 border-b border-slate-100">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-center mb-3">
+              ⚡ Instant 1-Click Demo Login
+            </span>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handle1ClickDemo('student1@hostel.com', 'student123', 'student')}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-all shadow-sm disabled:opacity-50"
+              >
+                {demoLoading === 'student' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                ) : (
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                )}
+                <span>Student Demo</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handle1ClickDemo('manager@mess.com', 'manager123', 'manager')}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition-all shadow-sm disabled:opacity-50"
+              >
+                {demoLoading === 'manager' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                )}
+                <span>Manager Demo</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-center text-slate-400 mt-2">
+              Click either button to log in immediately without typing credentials.
+            </p>
+          </div>
+
+          {/* Regular Manual Credentials Form */}
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Email Address
@@ -69,7 +119,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student1@hostel.com or manager@mess.com"
+                  placeholder="student1@hostel.com"
                   className="block w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm placeholder:text-slate-400 transition-all"
                 />
               </div>
@@ -97,46 +147,21 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50 mt-2"
             >
-              {loading ? (
+              {loading && !demoLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Sign In with Email</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block text-center mb-3">
-              1-Click Demo Fill
-            </span>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => fillCredentials('student1@hostel.com', 'student123')}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-all"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Student Demo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillCredentials('manager@mess.com', 'manager123')}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition-all"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>Manager Demo</span>
-              </button>
-            </div>
-          </div>
 
           <div className="mt-6 text-center">
             <p className="text-xs text-slate-500">
@@ -151,4 +176,3 @@ export default function Login() {
     </div>
   );
 }
-

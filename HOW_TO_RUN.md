@@ -130,3 +130,4 @@ uvicorn backend.main:app --reload --port 8000
 pytest tests/ -v
 ```
 *(If PowerShell blocks script execution, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first).*
+
