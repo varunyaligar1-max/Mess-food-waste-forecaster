@@ -1,192 +1,114 @@
 # 🍲 Mess Food-Waste Forecaster
 
-> A data-driven, machine-learning-powered head-count forecasting and meal planning system for university and hostel messes to slash avoidable food waste.
-
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=flat&logo=react)](https://reactjs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
-[![SQLModel](https://img.shields.io/badge/ORM-SQLModel%20%28SQLite%29-blue?style=flat)](https://sqlmodel.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> A data-driven, machine-learning-powered headcount forecasting and meal planning system for hostel messes to reduce avoidable food waste.
 
 ---
 
-## 📌 Problem & Impact
+## 📌 Problem Statement
 
-Hostel and university dining facilities routinely cook for **95–100% of enrolled students**, assuming static full attendance. In reality:
-- Students regularly skip meals due to late sleep schedules, exams, classes, or eating out.
-- **20–35% of cooked food is thrown directly into trash bins daily**, costing millions in food expenses while causing severe environmental impact.
-- **The Core Barrier**: Mess managers cannot risk running out of food, so without advance skip signals and headcount forecasting, they overcook by default.
+Hostel messes usually cook for nearly all registered students, because the kitchen has no advance information about who will actually eat. In practice, many students skip meals for reasons like sleeping in, going out, studying or eating elsewhere. The extra food is thrown away, which wastes money, ingredients, labour, and energy. Neither the kitchen nor the students have a simple way to share this information in advance, so the mess can’t plan its quantities properly.
+
+### Target Users:
+1. **Hostel Students**: Need a quick, frictionless way to mark which meals they’ll skip in advance.
+2. **Mess Managers and Kitchen Staff**: Need a reliable, aggregated estimate of how many plates to cook without risking shortages.
+
+> **Note on Data**: The estimate of *15–35% student skip rate* is an empirical operational estimate based on hostel patterns. Before using it in an official pitch or presentation, replace it with a recorded number from your specific mess (e.g. headcount vs plates cooked over a representative week), or label it explicitly as an estimate.
 
 ---
 
-## 💡 The Solution
+## 🎯 Main Objective
 
-1. **Student Skip-Declaration Portal**:
-   - Default status is **"Eating"** (never assumes silence is skipping).
-   - Students mark which meals they will **SKIP** in advance.
-   - **Enforced Cutoff Rule**: Skips lock 3 hours before meal service so the kitchen has guaranteed lead time.
-2. **Manager Forecast & Cook Guidance**:
-   - Privacy-Preserving: Managers see **aggregate counts only**, never individual student names.
-   - **Baseline + Learned ML Model**: Predicts true turnout factoring in registered skips, day-of-week, meal slot, and historical no-show rates.
-   - Recommends exact plates to cook with a safety buffer (5%).
-3. **Actuals Logging & Waste Audit**:
-   - Kitchen managers log cooked plates, served plates, and leftover kg after each meal.
-   - **Audit Rule**: Never claims food waste was reduced without verified data (requires at least 3 logged meals).
-   - Shows MAE forecast accuracy and compares plates saved vs traditional static cooking.
+Build a system that reduces food waste in hostel messes by predicting meal-wise turnout from student skip declarations and past attendance patterns.
+
+### Specific Objectives:
+1. **Collect skip information in advance**: Let students mark meals they won't eat, with **"eating" as the strict default** so silence is never treated as a skip.
+2. **Give the kitchen a planning window**: Lock changes a fixed time before each meal (**3 hours before service** in the current build) so the mess manager gets a firm, reliable count.
+3. **Forecast the real headcount**: Combine registered skips with weekday and meal-type no-show trends (using baseline buffer + learned moving average corrections) to suggest how many plates to cook.
+4. **Record actual outcomes**: Let the mess manager log plates cooked, plates served, and leftover food weight (kg) after each meal.
+5. **Measure performance honestly**: Report prediction error (MAE/MAPE) and waste before versus after, and show **"insufficient data"** when fewer than 3 meals have been logged.
+6. **Protect student privacy**: Show managers **only aggregate counts**, never individual names or roll numbers of who skipped, and restrict manager features through role-based access control (RBAC).
+7. **Keep improving**: Use every logged meal to dynamically adapt the no-show moving average, making the next prediction more accurate over time.
+
+---
+
+## 📊 Expected Outcomes
+
+- **A working web app** with dedicated Student and Manager views.
+- **A forecast that beats the "cook for everyone" approach**, supported by logged historical data.
+- **A report showing predicted vs. actual plates and food waste reduced**.
+- **A clear statement of limitations**, including dependence on students marking skips in advance and sample size constraints before machine-learning models reach full statistical power.
+
+---
+
+## 🖼️ Condensed Slide Deck Version (For Pitch & Presentations)
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      MESS FOOD-WASTE FORECASTER                          │
+│                                                                          │
+│  PROBLEM:                                                                │
+│  Hostel messes cook for 100% capacity due to zero advance visibility,    │
+│  causing massive food, labor, and financial waste daily.                 │
+│                                                                          │
+│  3 CORE OBJECTIVES:                                                      │
+│  1. COLLECT : Students mark skips with a strict 3-hour cutoff.           │
+│  2. PREDICT : ML model forecasts turnout combining skips & no-show trends│
+│  3. MEASURE : Managers log actuals; audit metrics report waste reduction.│
+│                                                                          │
+│  EXPECTED IMPACT:                                                        │
+│  • 20–35% food waste reduction.                                          │
+│  • Hundreds of plates & kilograms of food saved per month.               │
+│  • Zero student privacy compromise (aggregates only).                    │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python 3.11+, FastAPI, SQLModel (SQLite with WAL/Foreign Keys), Pydantic v2, JWT Authentication (`python-jose` + `passlib[bcrypt]`), CORS enabled.
-- **Forecasting & ML**: `backend/forecast.py` (Moving average no-show correction & scikit-learn Linear Regression, MAE & MAPE evaluation, counterfactual waste reduction analysis).
+- **Backend**: Python 3.11+, FastAPI, SQLModel (SQLite with Foreign Keys), Pydantic v2, JWT Auth (`python-jose` + `passlib[bcrypt]`), CORS enabled.
+- **Forecasting & ML**: `backend/forecast.py` (baseline buffer + moving average no-show rate per `(day_of_week, meal_type)`, MAE & MAPE evaluation, counterfactual waste reduction).
 - **Frontend**: React 18, Vite 6, Tailwind CSS, React Router v6, Axios, Recharts, Lucide Icons.
-- **Testing**: Pytest unit test suite covering auth, cutoff rule enforcement, forecasting algorithms, and manager privacy.
+- **Testing**: Pytest unit test suite covering Auth, Cutoff Rule, Forecasting Algorithms, and Manager Privacy.
 
 ---
 
-## 📂 Project Structure
+## 🚀 Quick Run Guide
 
-```text
-Mess food-waste forecaster/
-├── backend/
-│   ├── main.py              # FastAPI application, CORS, lifespan startup
-│   ├── models.py            # SQLModel entities: User, Meal, Skip, MealActual, Forecast
-│   ├── schemas.py           # Pydantic v2 validation & response models
-│   ├── auth.py              # JWT tokens, password hashing, role-based dependencies
-│   ├── database.py          # SQLite engine & session generator
-│   ├── config.py            # Environment configurations
-│   ├── forecast.py          # ML headcount prediction & waste evaluation
-│   ├── seed.py              # 14 days of realistic historical demo data
-│   ├── requirements.txt     # Python backend dependencies
-│   └── routers/
-│       ├── auth.py          # /api/auth (register, login, me)
-│       ├── meals.py         # /api/meals (upcoming, skip, unskip)
-│       ├── manager.py       # /api/manager (forecast, actuals, report)
-│       └── admin.py         # /api/admin/seed
-├── frontend/
-│   ├── src/
-│   │   ├── api/client.js    # Axios client with JWT interceptors
-│   │   ├── context/         # AuthContext & state management
-│   │   ├── components/      # Navbar, Toast notifications
-│   │   └── pages/
-│   │       ├── Login.jsx            # 1-click demo login
-│   │       ├── Register.jsx         # New student/manager registration
-│   │       ├── StudentDashboard.jsx # Upcoming meals, cutoff timers, skip toggles
-│   │       ├── ManagerDashboard.jsx # Aggregate forecasts, cook guidance, log actuals
-│   │       └── ManagerReport.jsx    # Waste reduction analytics & Recharts graphs
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── vite.config.js
-├── tests/
-│   ├── test_stage1_auth.py
-│   ├── test_stage2_cutoff_and_skips.py
-│   └── test_stage3_forecast_and_manager.py
-├── pytest.ini
-├── requirements.txt
-└── README.md
-```
-
----
-
-## 🚀 Quickstart & Running Instructions
-
-### 1. Prerequisites
-- **Python**: 3.11+ (installed with virtualenv)
-- **Node.js**: v18+ and `npm`
-
----
-
-### 2. Run the Backend API
-
-Open a terminal in the project root:
-
+### Terminal 1: Backend API
 ```powershell
-# Activate virtual environment or run via venv Python:
 .\venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8000
 ```
+- API URL: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Swagger Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-> **Backend API URL**: [http://127.0.0.1:8000](http://127.0.0.1:8000)  
-> **Interactive Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)  
-> **Health Check**: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-
----
-
-### 3. Run the Frontend Application
-
-Open a second terminal in the project root:
-
+### Terminal 2: Frontend Web App
 ```powershell
 cd frontend
 npm run dev
 ```
+- Web Application: **[http://localhost:5173](http://localhost:5173)**
 
-> **Frontend Web App**: [http://localhost:5173](http://localhost:5173)
-
----
-
-### 4. Run Automated Pytest Tests
-
+### Terminal 3: Automated Pytest Suite
 ```powershell
 .\venv\Scripts\python.exe -m pytest tests/ -v
 ```
-
-All 12 unit tests will execute and pass:
-- Stage 1: Auth, duplicate protection, JWT verification.
-- Stage 2: Cutoff rule enforcement, skip toggling, default eating status.
-- Stage 3: Headcount forecasting, ML correction, insufficient data guard, manager privacy.
 
 ---
 
 ## 🔑 Demo Credentials
 
-| Role | Email | Password | Notes |
+| Role | Email | Password | Access Rights |
 | :--- | :--- | :--- | :--- |
-| **Mess Manager** | `manager@mess.com` | `manager123` | Full access to Forecasts, Actuals, Reports |
-| **Sample Student 1** | `student1@hostel.com` | `student123` | Has pre-scheduled skips to explore |
-| **Sample Student 2** | `student2@hostel.com` | `student123` | Default eating status |
-| *(Students 3–40)* | `student3@hostel.com` ... `student40@hostel.com` | `student123` | 40 total simulated students |
+| **Mess Manager** | `manager@mess.com` | `manager123` | Kitchen Headcount Forecast, Cook Guidance, Log Actuals, Waste Analytics |
+| **Student** | `student1@hostel.com` | `student123` | View next 3 days of meals, toggle Skip/Eat, view cutoff countdown |
 
-> ⚡ *Tip: The Login page features **"1-Click Demo Fill"** buttons to log in instantly without typing.*
+*(The login page at `http://localhost:5173` features instant 1-click **"Student Demo"** and **"Manager Demo"** buttons).*
 
 ---
 
-## 🎬 3-Minute Hackathon Demo Script
+## ⚠️ System Limitations & Honest Disclosures
 
-Follow this sequence for an engaging live demo to judges:
-
-### Step 1: Login & The Problem (0:00 - 0:45)
-1. Navigate to `http://localhost:5173`.
-2. Click **"Student Demo"** and sign in as `student1@hostel.com`.
-3. Point out the **Upcoming Meal Schedule**:
-   - Notice that default status is **"Eating"** with a green badge.
-   - Point out the **live countdown timers** showing hours until the 3-hour kitchen cutoff.
-   - Show how easy it is to click **"Mark as Skip"** on tomorrow's breakfast. The badge flips to **"Skipping"** immediately with a toast notification.
-   - Point out how past-cutoff meals are strictly **locked** to prevent last-minute kitchen disruptions.
-
-### Step 2: Manager Forecast & Kitchen Guidance (0:45 - 1:45)
-1. Click **Logout** and click **"Manager Demo"** to log in as `manager@mess.com`.
-2. The **Daily Forecast Dashboard** loads:
-   - Highlight the **Privacy Guarantee**: the manager sees **only aggregate numbers** (e.g. 14 skips for breakfast, 8 skips for lunch), never student names.
-   - Explain the **Suggested Cook Plates**:
-     $$\text{Predicted Headcount} = \text{Total Students} - \text{Skips} - \text{Learned No-Show Correction}$$
-     $$\text{Suggested Cook Plates} = \lceil \text{Predicted Headcount} \times 1.05 \rceil$$
-   - Show the **"Learned Correction" badge** indicating machine-learning adjustment from past no-show rates.
-   - Click **"Log Actuals"** on a meal and enter: Cooked = 32 plates, Served = 30 plates, Leftover = 0.7 kg. Save it and watch the status update live.
-
-### Step 3: Food Waste Reduction & Audit Analytics (1:45 - 2:45)
-1. Click **"Waste Analytics & Reports"** in the top navigation bar.
-2. Highlight the **Business Rule Compliance**:
-   - If there are fewer than 3 logged meals, the platform displays an **"Insufficient Data"** shield banner.
-   - With the 14 days of historical logs, it shows:
-     - **35%+ Food Waste Reduction** achieved.
-     - **Hundreds of Plates Saved** from being discarded.
-     - **Food Weight Saved in KG** (diverted from municipal landfills).
-     - **Low Forecast Error (MAE)** (~1.8 plates average error).
-   - Walk through the interactive **Recharts graphs**:
-     - *Chart 1*: Predicted vs Actual attendance tracking over time.
-     - *Chart 2*: Before vs After comparison proving waste reduction against the static 95% cooking baseline.
-
-### Step 4: 1-Click Demo Reset (2:45 - 3:00)
-- Show the **"Reset Demo Data"** button in the top navbar. Click it to demonstrate that the entire SQLite database can be re-seeded with 72 meals and 840 realistic skips on the fly for repeat presentations.
-
+1. **Dependence on Student Participation**: The accuracy of the baseline forecast depends on students actively marking their skips. The default of "eating" prevents undercooking, while the learned correction mitigates silent no-shows.
+2. **Cold Start & Sample Size**: On a fresh deployment without history, the model operates in "baseline buffer" mode. It unlocks the "learned correction" method once 10+ meals have been logged, and requires at least 3 logged meals before reporting waste reduction statistics.
+3. **Unexpected Events**: Extreme weather, unannounced campus holidays, or festival days may cause sudden turnout shifts that historical patterns cannot foresee.
